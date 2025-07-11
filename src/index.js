@@ -243,54 +243,54 @@ client.on('message', async msg=>{
     await msg.reply(resp); return;
   }
 
-    /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
+  /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
   if (state.ultimoCurso) {
     const curso = cursosData.find(c => c.titulo === state.ultimoCurso);
     if (curso) {
-      const lower = textoNorm;
+      const lower = norm(texto);  // usamos texto normalizado sin tildes
 
       // Preguntas sobre requisitos / edad
-      if (/tengo\s+\d+\s+años|puedo\s+inscribirme|edad\s+(mínima|requerida)?|requisito|requisitos|aceptan\s+menores|necesito.*(estudio|secundario|experiencia)/i.test(lower)) {
-        await msg.reply(`Para el curso <strong>${curso.titulo}</strong>, el requisito es: ${curso.requisitos || 'No disponible'}.`);
+      if (/tengo\s+\d+\s+anios|puedo\s+inscribirme|edad\s+(minima|requerida)?|requisito|requisitos|aceptan\s+menores|necesito.*(estudio|secundario|experiencia)/i.test(lower)) {
+        await msg.reply(limpiarHTML(`Para el curso <strong>${curso.titulo}</strong>, el requisito es: ${curso.requisitos || 'No disponible'}.`));
         return;
       }
 
       // Preguntas sobre sede o localidad
-      if (/dónde|donde|localidad|localidades|sede/i.test(lower)) {
+      if (/donde|localidad|localidades|sede/i.test(lower)) {
         const resp = curso.localidades.length
           ? `El curso <strong>${curso.titulo}</strong> se dicta en: ${curso.localidades.join(', ')}.`
           : `Este curso todavía no tiene sede confirmada.`;
-        await msg.reply(`${resp} Es presencial y gratuito, inicia el ${fechaLarga(curso.fecha_inicio)} y está en estado de ${curso.estado.replace('_',' ')}. Formulario de inscripción: ${curso.formulario}`);
+        await msg.reply(limpiarHTML(`${resp} Es presencial y gratuito, inicia el ${fechaLarga(curso.fecha_inicio)} y está en estado de ${curso.estado.replace('_',' ')}. Formulario de inscripción: ${curso.formulario}`));
         return;
       }
 
       // Preguntas sobre inscripción
-      if (/inscribirme|anotarme|formulario|link|cómo me anoto|me quiero anotar|me puedo inscribir/i.test(lower)) {
-        await msg.reply(`Para el curso <strong>${curso.titulo}</strong>, el formulario es: ${curso.formulario}`);
+      if (/inscribirme|anotarme|formulario|link|como me anoto|me quiero anotar|me puedo inscribir/i.test(lower)) {
+        await msg.reply(limpiarHTML(`Para el curso <strong>${curso.titulo}</strong>, el formulario es: ${curso.formulario}`));
         return;
       }
 
       // Preguntas sobre fecha
-      if (/cuándo empieza|fecha de inicio|cuando inicia|ya empezó|empieza el/i.test(lower)) {
-        await msg.reply(`El curso <strong>${curso.titulo}</strong> comienza el ${fechaLarga(curso.fecha_inicio)}.`);
+      if (/cuando empieza|fecha de inicio|cuando inicia|ya empezo|empieza el|inicio del curso/i.test(lower)) {
+        await msg.reply(limpiarHTML(`El curso <strong>${curso.titulo}</strong> comienza el ${fechaLarga(curso.fecha_inicio)}.`));
         return;
       }
 
       // Preguntas sobre estado
-      if (/estado|está abierto|todavía.*inscribir/i.test(lower)) {
-        await msg.reply(`El curso <strong>${curso.titulo}</strong> está en estado de ${curso.estado.replace('_',' ')}.`);
+      if (/estado|esta abierto|todavia.*inscribir/i.test(lower)) {
+        await msg.reply(limpiarHTML(`El curso <strong>${curso.titulo}</strong> está en estado de ${curso.estado.replace('_',' ')}.`));
         return;
       }
 
       // Preguntas sobre si es gratuito
-      if (/cuánto cuesta|es pago|hay que pagar|es gratuito|vale plata/i.test(lower)) {
-        await msg.reply(`El curso <strong>${curso.titulo}</strong> es totalmente gratuito y presencial.`);
+      if (/cuanto cuesta|es pago|hay que pagar|es gratuito|vale plata/i.test(lower)) {
+        await msg.reply(limpiarHTML(`El curso <strong>${curso.titulo}</strong> es totalmente gratuito y presencial.`));
         return;
       }
 
       // Preguntas sobre certificación
-      if (/certificado|certificación|dan.*título|entregan.*diploma/i.test(lower)) {
-        await msg.reply(`No hay información disponible sobre certificación oficial para el curso <strong>${curso.titulo}</strong>.`);
+      if (/certificado|certificacion|dan.*titulo|entregan.*diploma/i.test(lower)) {
+        await msg.reply(limpiarHTML(`No hay información disponible sobre certificación oficial para el curso <strong>${curso.titulo}</strong>.`));
         return;
       }
     }
