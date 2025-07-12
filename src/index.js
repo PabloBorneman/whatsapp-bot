@@ -110,6 +110,7 @@ del Ministerio de Trabajo de la provincia de Jujuy.
 
 🔍 COINCIDENCIAS
 1. Coincidencia exacta ⇒ describe solo ese curso.
+• Si solo hay un curso que coincide con lo pedido (por palabra clave o localidad), responde solo ese curso. No agregues otros cursos aunque estén en la misma zona.
 2. Coincidencia aproximada (≥50 % palabras) ⇒ ofrece 1-2 matches.
 3. Sin coincidencias ⇒ solicita precisión.
 
@@ -240,7 +241,6 @@ client.on("message", async (msg) => {
               claves.some((r) =>
                 c.titulo.split(/\s+/).some((w) => norm(w).startsWith(r))
               )
-
           )
           .sort((a, b) => a.titulo.localeCompare(b.titulo));
 
@@ -510,6 +510,7 @@ client.on("message", async (msg) => {
   }
 
   /* 6.4 Fallback GPT ---------------------------------------------------*/
+  /* 6.4 Fallback GPT ---------------------------------------------------*/
   try {
     const res = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -523,11 +524,13 @@ client.on("message", async (msg) => {
 
     let r = res.choices[0].message.content.trim();
 
+    // Detectar si se menciona algún curso conocido
     const encontrado = cursosData.find((c) =>
       new RegExp(`\\b${norm(c.titulo)}\\b`).test(norm(r))
     );
     if (encontrado) state.ultimoCurso = encontrado.titulo;
 
+    // Reemplazar enlaces con formato Markdown o HTML por texto plano
     r = r
       .replace(
         /<a [^>]*href="([^"]+)".*?<\/a>/gi,
@@ -539,6 +542,13 @@ client.on("message", async (msg) => {
       )
       .replace(/<\/?[^>]+>/g, "");
 
+    // Eliminar duplicados de "Formulario de inscripción"
+    r = r.replace(
+      /(Formulario de inscripción: https:\/\/[^\s]+)(\s*\1)+/g,
+      "$1"
+    );
+
+    // Guardar último link útil
     const link = r.match(/https?:\/\/\S+/);
     if (link) state.ultimoLink = link[0];
 
