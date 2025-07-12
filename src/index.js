@@ -542,11 +542,22 @@ client.on("message", async (msg) => {
       )
       .replace(/<\/?[^>]+>/g, "");
 
-    // Eliminar duplicados de "Formulario de inscripción"
-    r = r.replace(
-      /(Formulario de inscripción: https:\/\/[^\s]+)(\s*\1)+/g,
-      "$1"
-    );
+    // Eliminar duplicados de líneas "Formulario de inscripción: <link>"
+    const lineas = r.split(/\r?\n/);
+    const vistas = new Set();
+    r = lineas
+      .filter((line) => {
+        const normalizada = line
+          .toLowerCase()
+          .replace(/\.$/, "") // quitar punto final
+          .trim();
+        if (normalizada.startsWith("formulario de inscripción:")) {
+          if (vistas.has(normalizada)) return false;
+          vistas.add(normalizada);
+        }
+        return true;
+      })
+      .join(" ");
 
     // Guardar último link útil
     const link = r.match(/https?:\/\/\S+/);
