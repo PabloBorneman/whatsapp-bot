@@ -36,6 +36,8 @@ try {
 const norm = (s = '') =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+const limpiarHTML = str => str.replace(/<\/?[^>]+>/g, '');
+
 const meses = [
   'enero','febrero','marzo','abril','mayo','junio',
   'julio','agosto','septiembre','octubre','noviembre','diciembre'
