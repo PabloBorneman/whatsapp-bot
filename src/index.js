@@ -306,9 +306,9 @@ client.on("message", async (msg) => {
     if (curso) {
       const lower = textoNorm;
 
-      // Requisitos / edad
+      // Requisitos / edad / experiencia previa
       if (
-        /tengo\s+\d+\s+años|puedo\s+inscribirme|edad\s+(mínima|requerida)?|requisito|requisitos|aceptan\s+menores|necesito.*(estudio|secundario|experiencia)/i.test(
+        /tengo\s+\d+\s+años|puedo.*(anotar|inscribir)|edad.*(minima|requireda)?|requisito|requisitos|aceptan.*menores|necesito.*(secundario|experiencia|estudio)|hay.*limite.*edad/i.test(
           lower
         )
       ) {
@@ -321,7 +321,11 @@ client.on("message", async (msg) => {
       }
 
       // Sede / localidad
-      if (/dónde|donde|localidad|localidades|sede/i.test(lower)) {
+      if (
+        /donde.*(dicta|cursa|hace)|localidad|localidades|sede|lugar|direccion/i.test(
+          lower
+        )
+      ) {
         const resp = curso.localidades.length
           ? `Este curso se dicta en: ${curso.localidades.join(
               ", "
@@ -329,13 +333,13 @@ client.on("message", async (msg) => {
           : `Todavía no se confirmó la sede para este curso. Pero es gratuito, presencial, y empieza el ${fechaLarga(
               curso.fecha_inicio
             )}. Apenas se confirme el lugar, vas a poder inscribirte con el mismo formulario.`;
-        await msg.reply(limpiarHTML(`${resp}`));
+        await msg.reply(limpiarHTML(resp));
         return;
       }
 
       // Inscripción / formulario
       if (
-        /inscribirme|anotarme|formulario|link|cómo me anoto|me quiero anotar|me puedo inscribir/i.test(
+        /inscribirme|anotarme|formulario|link|cómo me anoto|quiero anotarme|como hago para anotarme|como.*inscribo/i.test(
           lower
         )
       ) {
@@ -347,9 +351,9 @@ client.on("message", async (msg) => {
         return;
       }
 
-      // Fecha de inicio
+      // Fecha de inicio / ya empezó
       if (
-        /cuando empieza|fecha de inicio|cuando inicia|ya empezo|empieza el/i.test(
+        /cuando.*(empieza|inicia)|fecha.*(inicio|comienzo)|ya.*(empezo|empezó)|arranca|comienza/i.test(
           lower
         )
       ) {
@@ -364,18 +368,50 @@ client.on("message", async (msg) => {
       }
 
       // Estado del curso
-      if (/estado|esta abierto|todavia.*inscribir/i.test(lower)) {
-        await msg.reply(
-          limpiarHTML(
-            `¡Buen momento! Este curso tiene la inscripción abierta, así que si te interesa, podés anotarte ya.`
-          )
-        );
+      if (
+        /estado|esta.*(abierto|cerrado)|todavia.*inscribir|inscripcion.*abierta|queda.*tiempo/i.test(
+          lower
+        )
+      ) {
+        const estado = curso.estado.replace("_", " ");
+
+        if (curso.estado === "inscripcion_abierta") {
+          await msg.reply(
+            limpiarHTML(
+              `¡Buen momento! Este curso tiene la inscripción abierta, así que si te interesa, podés anotarte ya.`
+            )
+          );
+        } else if (curso.estado === "en_curso") {
+          await msg.reply(
+            limpiarHTML(
+              `Este curso ya está en marcha, pero si te interesa, podés anotarte y consultar si todavía aceptan nuevos participantes.`
+            )
+          );
+        } else if (curso.estado === "finalizado") {
+          await msg.reply(
+            limpiarHTML(
+              `Este curso ya finalizó. Es posible que vuelva a dictarse más adelante. Si querés, te puedo avisar si se abre una nueva edición.`
+            )
+          );
+        } else if (curso.estado === "proximo") {
+          await msg.reply(
+            limpiarHTML(
+              `Este curso está programado para comenzar pronto. Aún no abrió la inscripción, pero podés estar atento/a o pedirme que te avise.`
+            )
+          );
+        } else {
+          await msg.reply(
+            limpiarHTML(
+              `Este curso está en estado de ${estado}. Si querés te averiguo más detalles.`
+            )
+          );
+        }
         return;
       }
 
-      // Gratuito
+      // Gratuito / costo
       if (
-        /cuanto cuesta|es pago|hay que pagar|es gratuito|vale plata/i.test(
+        /cuanto.*(cuesta|sale)|es.*(pago|gratuito)|hay.*que.*pagar|vale.*plata/i.test(
           lower
         )
       ) {
@@ -387,13 +423,83 @@ client.on("message", async (msg) => {
         return;
       }
 
-      // Certificación
+      // Certificación / título / diploma
       if (
-        /certificado|certificacion|dan.*titulo|entregan.*diploma/i.test(lower)
+        /certificado|certificacion|dan.*titulo|entregan.*diploma|validez.*oficial/i.test(
+          lower
+        )
       ) {
         await msg.reply(
           limpiarHTML(
             `Por ahora no tenemos confirmación sobre si este curso entrega certificado oficial. En cuanto sepamos algo más, lo vamos a informar.`
+          )
+        );
+        return;
+      }
+
+      // Duración
+      if (/cuanto.*dura|duracion|cuantos.*dias|cuantas.*semanas/i.test(lower)) {
+        await msg.reply(
+          limpiarHTML(
+            `La duración del curso puede variar según la planificación, pero en general duran entre 1 y 3 meses. Si querés te puedo averiguar más detalles.`
+          )
+        );
+        return;
+      }
+
+      // Horarios
+      if (/horario|hora|turno|mañana|tarde|noche/i.test(lower)) {
+        await msg.reply(
+          limpiarHTML(
+            `Los horarios dependen de la sede y del docente asignado. Por lo general hay turnos mañana o tarde. Si necesitás algo específico, avisame y lo consulto.`
+          )
+        );
+        return;
+      }
+
+      // Contenido / temario / qué se ve
+      if (
+        /que.*(enseñan|aprende|ve|dan)|contenido|temario|temas/i.test(lower)
+      ) {
+        await msg.reply(
+          limpiarHTML(
+            `En este curso vas a aprender contenidos teóricos y prácticos sobre ${curso.titulo.toLowerCase()}. Si querés el detalle completo, te lo puedo mandar o averiguar.`
+          )
+        );
+        return;
+      }
+
+      // Salida laboral
+      if (
+        /salida.*laboral|sirve.*trabajo|ayuda.*conseguir.*empleo/i.test(lower)
+      ) {
+        await msg.reply(
+          limpiarHTML(
+            `Este curso está orientado a brindar herramientas prácticas para mejorar tus oportunidades laborales. Muchos egresados consiguen empleo gracias a estas formaciones.`
+          )
+        );
+        return;
+      }
+
+      // Materiales / herramientas / qué hay que llevar
+      if (
+        /materiales|herramientas|necesito.*llevar|dan.*(herramientas|material)|hay.*que.*comprar/i.test(
+          lower
+        )
+      ) {
+        await msg.reply(
+          limpiarHTML(
+            `No hace falta llevar materiales para empezar. En general se trabaja con herramientas del aula, pero si hay algo específico que llevar, te lo van a avisar antes del inicio.`
+          )
+        );
+        return;
+      }
+
+      // Dudas generales
+      if (/tengo.*duda|me.*explicas|no.*entiendo|me.*ayudas/i.test(lower)) {
+        await msg.reply(
+          limpiarHTML(
+            `Claro, estoy para ayudarte. ¿Qué parte no te quedó clara o querés que te explique mejor sobre el curso ${curso.titulo}?`
           )
         );
         return;
