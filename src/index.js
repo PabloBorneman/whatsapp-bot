@@ -236,10 +236,11 @@ client.on("message", async (msg) => {
         const hits = cursosData
           .filter(
             (c) =>
-              (c.localidades.includes(loc) || c.localidades.length === 0) &&
+              c.localidades.includes(loc) &&
               claves.some((r) =>
                 c.titulo.split(/\s+/).some((w) => norm(w).startsWith(r))
               )
+
           )
           .sort((a, b) => a.titulo.localeCompare(b.titulo));
 
