@@ -317,7 +317,7 @@ client.on("message", async (msg) => {
   /* 6.3 Pregunta de sede/localidades sobre curso exacto ---------------*/
   const cursoExacto = cursosData.find(
     (c) =>
-      texto.toLowerCase().includes(c.titulo.toLowerCase()) &&
+      norm(texto).includes(norm(c.titulo)) && // ← ANTES usaba toLowerCase()
       /(dónde|donde|localidad|localidades|sede)/i.test(texto)
   );
 
@@ -540,7 +540,9 @@ client.on("message", async (msg) => {
 
       // Contenido / temario / qué se ve
       if (
-        /que.*(enseñan|aprende|ve|dan)|contenido|temario|temas/i.test(lower)
+        /(que.*(enseñan|aprende|ve|dan|hace|hacen)|qué\s+se\s+hace|contenido|temario|temas)/i.test(
+          lower
+        )
       ) {
         await msg.reply(
           limpiarHTML(
@@ -589,6 +591,7 @@ client.on("message", async (msg) => {
   }
 
   /* 6.4 Fallback GPT ---------------------------------------------------*/
+  /* 6.4 Fallback GPT ---------------------------------------------------*/
   try {
     const res = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -603,12 +606,23 @@ client.on("message", async (msg) => {
     let r = res.choices[0].message.content.trim();
 
     // Detectar si se menciona algún curso conocido
-    const encontrados = cursosData.filter((c) =>
+    let encontrados = cursosData.filter((c) =>
       new RegExp(`\\b${norm(c.titulo)}\\b`).test(norm(r))
     );
+
+    /* 🔸 Filtro anti-duplicados:
+     quita títulos que sean subcadena de otro
+     (ej.: “Indumentaria” dentro de “Indumentaria Carnavalera”) */
+    encontrados = encontrados.filter(
+      (c1) =>
+        !encontrados.some(
+          (c2) => c2 !== c1 && norm(c2.titulo).includes(norm(c1.titulo))
+        )
+    );
+
     if (encontrados.length) {
       state.ultimoCursos = encontrados.map((c) => c.titulo);
-      state.ultimoLink = encontrados[0].formulario; // guarda el primero como fallback
+      state.ultimoLink = encontrados[0].formulario; // primero como fallback
     }
 
     // 1) Negrita y cursiva de HTML → formato WhatsApp
@@ -619,37 +633,32 @@ client.on("message", async (msg) => {
     // 2) Reemplazar enlaces HTML o Markdown por texto plano descriptivo
     r = r
       .replace(
-        // <a …>enlace</a>
-        /<a [^>]*href="([^"]+)".*?<\/a>/gi,
+        /<a [^>]*href="([^"]+)".*?<\/a>/gi, // <a …>enlace</a>
         (_, u) => `Formulario de inscripción: ${u}`
       )
       .replace(
-        // [texto](https://…)
-        /\[[^\]]*formulario[^\]]*\]\((https?:\/\/[^\)]+)\)/gi,
+        /\[[^\]]*formulario[^\]]*\]\((https?:\/\/[^\)]+)\)/gi, // [texto](…)
         (_, u) => `Formulario de inscripción: ${u}`
       );
 
-    // 3) Eliminar cualquier etiqueta HTML residual que aún quede
+    // 3) Eliminar cualquier etiqueta HTML residual
     r = r.replace(/<\/?[^>]+>/g, "");
 
-    // Eliminar duplicados de líneas "Formulario de inscripción: <link>"
+    // 4) Eliminar duplicados de líneas "Formulario de inscripción: …"
     const lineas = r.split(/\r?\n/);
     const vistas = new Set();
     r = lineas
       .filter((line) => {
-        const normalizada = line
-          .toLowerCase()
-          .replace(/\.$/, "") // quitar punto final
-          .trim();
-        if (normalizada.startsWith("formulario de inscripción:")) {
-          if (vistas.has(normalizada)) return false;
-          vistas.add(normalizada);
+        const normal = line.toLowerCase().replace(/\.$/, "").trim();
+        if (normal.startsWith("formulario de inscripción:")) {
+          if (vistas.has(normal)) return false;
+          vistas.add(normal);
         }
         return true;
       })
       .join(" ");
 
-    // Guardar último link útil
+    // 5) Guardar último link útil
     const link = r.match(/https?:\/\/\S+/);
     if (link) state.ultimoLink = link[0];
 
