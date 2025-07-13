@@ -498,7 +498,7 @@ client.on("message", async (msg) => {
         } else {
           await msg.reply(
             limpiarHTML(
-              `Este curso está en estado de ${estado}. Si querés te averiguo más detalles.`
+              `Este curso está en estado de ${estado}.`
             )
           );
         }
@@ -537,7 +537,7 @@ client.on("message", async (msg) => {
       if (/cuanto.*dura|duracion|cuantos.*dias|cuantas.*semanas/i.test(lower)) {
         await msg.reply(
           limpiarHTML(
-            `La duración del curso puede variar según la planificación, pero en general duran entre 1 y 3 meses. Si querés te puedo averiguar más detalles.`
+            `La duración del curso puede variar según la planificación, pero en general duran entre 1 y 3 meses.`
           )
         );
         return;
