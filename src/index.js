@@ -160,7 +160,7 @@ client.on("message", async (msg) => {
   if (!texto) return;
 
   const chatId = msg.from;
-  const state = sesiones.get(chatId) || { ultimoLink: null, ultimoCurso: null };
+  const state = sesiones.get(chatId) || { ultimoLink: null, ultimoCursos: [] };
   sesiones.set(chatId, state);
 
   /* 6.1 Atajo "link/formulario/inscribirme" ---------------------------*/
@@ -169,11 +169,13 @@ client.on("message", async (msg) => {
       await msg.reply(`Formulario de inscripción: ${state.ultimoLink}`);
       return;
     }
-    if (state.ultimoCurso) {
-      const c = cursosData.find((x) => x.titulo === state.ultimoCurso);
+    if (state.ultimoCursos && state.ultimoCursos.length > 0) {
+      const c = cursosData.find((x) => x.titulo === state.ultimoCursos[0]);
       if (c) {
         state.ultimoLink = c.formulario;
-        await msg.reply(`Formulario de inscripción: ${c.formulario}`);
+        await msg.reply(
+          `Te paso el link del primero de los cursos que mencionaste (“${c.titulo}”): ${c.formulario}`
+        );
         return;
       }
     }
@@ -305,14 +307,44 @@ client.on("message", async (msg) => {
   }
 
   /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
-  if (state.ultimoCurso) {
-    const curso = cursosData.find((c) => c.titulo === state.ultimoCurso);
+
+  // Si el usuario mencionó varios cursos, preguntamos a cuál se refiere
+  if (state.ultimoCursos && state.ultimoCursos.length > 1) {
+    await msg.reply(
+      `Mencionaste varios cursos: ${state.ultimoCursos.join(
+        ", "
+      )}. ¿Sobre cuál querés saber más?`
+    );
+    return;
+  }
+
+  // Si el usuario ahora aclara a cuál curso se refiere entre los mencionados
+  const posibleCurso = cursosData.find((c) =>
+    norm(texto).includes(norm(c.titulo))
+  );
+  if (
+    state.ultimoCursos &&
+    state.ultimoCursos.length > 1 &&
+    posibleCurso &&
+    state.ultimoCursos.includes(posibleCurso.titulo)
+  ) {
+    state.ultimoCursos = [posibleCurso.titulo];
+    state.ultimoLink = posibleCurso.formulario;
+    await msg.reply(
+      `Perfecto, tomamos "${posibleCurso.titulo}" como el curso actual. ¿Qué te gustaría saber?`
+    );
+    return;
+  }
+
+  // Si hay un solo curso en memoria, aplicamos todas las respuestas frecuentes
+  if (state.ultimoCursos && state.ultimoCursos.length === 1) {
+    const curso = cursosData.find((c) => c.titulo === state.ultimoCursos[0]);
     if (curso) {
       const lower = textoNorm;
 
       // Requisitos / edad / experiencia previa
       if (
-        /tengo\s+\d+\s+años|puedo.*(anotar|inscribir)|edad.*(minima|requireda)?|requisito|requisitos|aceptan.*menores|necesito.*(secundario|experiencia|estudio)|hay.*limite.*edad/i.test(
+        /tengo\s+\d+\s+años|puedo.*(anotar|inscribir)|edad.*(minima|requerida)?|requisito|requisitos|aceptan.*menores|necesito.*(secundario|experiencia|estudio)|hay.*limite.*edad/i.test(
           lower
         )
       ) {
@@ -378,7 +410,6 @@ client.on("message", async (msg) => {
         )
       ) {
         const estado = curso.estado.replace("_", " ");
-
         if (curso.estado === "inscripcion_abierta") {
           await msg.reply(
             limpiarHTML(
@@ -512,7 +543,6 @@ client.on("message", async (msg) => {
   }
 
   /* 6.4 Fallback GPT ---------------------------------------------------*/
-  /* 6.4 Fallback GPT ---------------------------------------------------*/
   try {
     const res = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -527,10 +557,13 @@ client.on("message", async (msg) => {
     let r = res.choices[0].message.content.trim();
 
     // Detectar si se menciona algún curso conocido
-    const encontrado = cursosData.find((c) =>
+    const encontrados = cursosData.filter((c) =>
       new RegExp(`\\b${norm(c.titulo)}\\b`).test(norm(r))
     );
-    if (encontrado) state.ultimoCurso = encontrado.titulo;
+    if (encontrados.length) {
+      state.ultimoCursos = encontrados.map((c) => c.titulo);
+      state.ultimoLink = encontrados[0].formulario; // guarda el primero como fallback
+    }
 
     // Reemplazar enlaces con formato Markdown o HTML por texto plano
     r = r
