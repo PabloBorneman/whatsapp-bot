@@ -364,10 +364,25 @@ client.on("message", async (msg) => {
     posibleCurso &&
     state.ultimoCursos.includes(posibleCurso.titulo)
   ) {
+    // ── Guardar como curso único ────────────────────────────
     state.ultimoCursos = [posibleCurso.titulo];
     state.ultimoLink = posibleCurso.formulario;
+
+    // ── Responder con el detalle completo ───────────────────
+    const det = (posibleCurso.descripcion || "").trim();
+    const sedes = posibleCurso.localidades.length
+      ? `Se dicta en: ${posibleCurso.localidades.join(", ")}. `
+      : "Todavía no tiene sede confirmada. ";
+
     await msg.reply(
-      `Perfecto, tomamos "${posibleCurso.titulo}" como el curso actual. ¿Qué te gustaría saber?`
+      limpiarHTML(
+        `*${posibleCurso.titulo}*. ${sedes}` +
+          `Inicia el ${fechaLarga(posibleCurso.fecha_inicio)}, ` +
+          `es presencial y gratuito y está en estado de ` +
+          `${posibleCurso.estado.replace("_", " ")}. ` +
+          (det ? det + " " : "") +
+          `Podés inscribirte desde este formulario: ${posibleCurso.formulario}`
+      )
     );
     return;
   }
@@ -544,9 +559,11 @@ client.on("message", async (msg) => {
           lower
         )
       ) {
+        const detalle = (curso.descripcion || "").trim();
         await msg.reply(
           limpiarHTML(
-            `En este curso vas a aprender contenidos teóricos y prácticos sobre ${curso.titulo.toLowerCase()}. Si querés el detalle completo, te lo puedo mandar o averiguar.`
+            detalle ||
+              `Este curso combina teoría y práctica sobre ${curso.titulo.toLowerCase()}.`
           )
         );
         return;
