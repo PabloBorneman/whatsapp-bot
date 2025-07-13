@@ -308,20 +308,8 @@ client.on("message", async (msg) => {
 
   /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
 
-  // Si el usuario mencionó varios cursos, preguntamos a cuál se refiere
-  if (state.ultimoCursos && state.ultimoCursos.length > 1) {
-    await msg.reply(
-      `Mencionaste varios cursos: ${state.ultimoCursos.join(
-        ", "
-      )}. ¿Sobre cuál querés saber más?`
-    );
-    return;
-  }
-
-  // Si el usuario ahora aclara a cuál curso se refiere entre los mencionados
-  const posibleCurso = cursosData.find((c) =>
-    norm(texto).includes(norm(c.titulo))
-  );
+  // Primero: si el usuario aclara a qué curso se refiere
+  const posibleCurso = cursosData.find((c) => norm(texto) === norm(c.titulo));
   if (
     state.ultimoCursos &&
     state.ultimoCursos.length > 1 &&
@@ -336,7 +324,17 @@ client.on("message", async (msg) => {
     return;
   }
 
-  // Si hay un solo curso en memoria, aplicamos todas las respuestas frecuentes
+  // Luego: si no eligió aún, pedirle que lo haga
+  if (state.ultimoCursos && state.ultimoCursos.length > 1) {
+    await msg.reply(
+      `Mencionaste varios cursos: ${state.ultimoCursos.join(
+        ", "
+      )}. ¿Sobre cuál querés saber más?`
+    );
+    return;
+  }
+
+  // Finalmente: si hay solo uno guardado, proceder con preguntas frecuentes
   if (state.ultimoCursos && state.ultimoCursos.length === 1) {
     const curso = cursosData.find((c) => c.titulo === state.ultimoCursos[0]);
     if (curso) {
