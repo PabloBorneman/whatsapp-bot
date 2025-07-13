@@ -241,8 +241,12 @@ client.on("message", async (msg) => {
       "cons",
     ];
     const claves = raices.filter((r) => textoNorm.includes(r));
+
     if (claves.length) {
-      const partes = [];
+      let totalHits = 0;
+      let unicoCurso = null;
+      let respuesta = [];
+
       localidadesPedidas.forEach((loc) => {
         const hits = cursosData
           .filter(
@@ -254,6 +258,8 @@ client.on("message", async (msg) => {
           )
           .sort((a, b) => a.titulo.localeCompare(b.titulo));
 
+        totalHits += hits.length;
+        if (hits.length === 1) unicoCurso = hits[0]; // posible único
         if (hits.length) {
           const lista = hits
             .map((c) =>
@@ -262,18 +268,48 @@ client.on("message", async (msg) => {
                 : `${c.titulo} (sin sede confirmada)`
             )
             .join(", ");
-          partes.push(`En ${loc} hay: ${lista}.`);
+          respuesta.push(`En ${loc} hay: ${lista}.`);
         } else {
-          partes.push(`En ${loc} no hay cursos que coincidan con tu búsqueda.`);
+          respuesta.push(
+            `En ${loc} no hay cursos que coincidan con tu búsqueda.`
+          );
         }
       });
 
-      if (partes.some((p) => p.includes("hay:"))) {
+      /* ── Nuevo comportamiento ─────────────────────────────────── */
+      if (totalHits === 1 && unicoCurso) {
+        // Guardamos estado
+        state.ultimoCursos = [unicoCurso.titulo];
+        state.ultimoLink = unicoCurso.formulario;
+
+        // Respondemos con detalle + link
+        const det = unicoCurso.descripcion
+          ? `${unicoCurso.descripcion.trim()} `
+          : ""; // por si el JSON trae descripción
         await msg.reply(
-          partes.join(" ") +
+          `Sí, en la localidad de ${localidadesPedidas[0]} se dicta el curso ` +
+            `*${unicoCurso.titulo}*, el cual inicia el ` +
+            `${fechaLarga(unicoCurso.fecha_inicio)}. ${det}` +
+            `Es presencial y gratuito y está en estado de ` +
+            `${unicoCurso.estado.replace("_", " ")}. ` +
+            `Podés inscribirte desde este formulario: ${unicoCurso.formulario} ` +
+            `¿Hay algo más en lo que pueda ayudarte?`
+        );
+        return; // saltamos GPT
+      }
+
+      /* ── Caso de 2+ cursos (lógica previa, pero guardando estado) ── */
+      if (respuesta.some((p) => p.includes("hay:"))) {
+        state.ultimoCursos = respuesta
+          .flatMap((p) => p.match(/hay: (.*)\./i)?.[1].split(/,\s*/) || [])
+          .map((s) => s.replace(/\s+\(.+\)$/, "")); // títulos limpios
+        state.ultimoLink = null;
+
+        await msg.reply(
+          respuesta.join(" ") +
             " ¿Sobre cuál querés más información o inscribirte?"
         );
-        return; // evita llamada GPT
+        return;
       }
     }
   }
