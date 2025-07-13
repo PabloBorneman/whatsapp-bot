@@ -308,7 +308,9 @@ client.on("message", async (msg) => {
 
   /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
 
-  // Primero: si el usuario aclara a qué curso se refiere
+  /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
+
+  // 1️⃣  Si el usuario acaba de elegir un curso entre varios
   const posibleCurso = cursosData.find((c) => norm(texto) === norm(c.titulo));
   if (
     state.ultimoCursos &&
@@ -324,7 +326,7 @@ client.on("message", async (msg) => {
     return;
   }
 
-  // Luego: si no eligió aún, pedirle que lo haga
+  // 2️⃣  Si todavía no eligió, se lo volvemos a pedir
   if (state.ultimoCursos && state.ultimoCursos.length > 1) {
     await msg.reply(
       `Mencionaste varios cursos: ${state.ultimoCursos.join(
