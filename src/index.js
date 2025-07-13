@@ -287,7 +287,7 @@ client.on("message", async (msg) => {
         " "
       )}. Formulario de inscripción: ${cursoExacto.formulario}`;
       state.ultimoLink = cursoExacto.formulario;
-      state.ultimoCurso = cursoExacto.titulo;
+      state.ultimoCursos = [cursoExacto.titulo];
       await msg.reply(resp);
       return;
     }
