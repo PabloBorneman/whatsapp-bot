@@ -42,6 +42,12 @@ const norm = (s = "") =>
 
 const limpiarHTML = (str) => str.replace(/<\/?[^>]+>/g, "");
 
+// Convierte <strong>, <em>, <b>, <i> a formato WhatsApp (*, _)
+const htmlToWapp = (str = "") =>
+  str
+    .replace(/<(strong|b)>(.*?)<\/\1>/gi, "*$2*")
+    .replace(/<(em|i)>(.*?)<\/\1>/gi, "_$2_");
+
 const meses = [
   "enero",
   "febrero",
@@ -278,9 +284,13 @@ client.on("message", async (msg) => {
       texto.toLowerCase().includes(c.titulo.toLowerCase()) &&
       /(dónde|donde|localidad|localidades|sede)/i.test(texto)
   );
+
   if (cursoExacto) {
+    // ── SIN localidades cargadas ────────────────────────────────
     if (cursoExacto.localidades.length === 0) {
-      const resp = `Este curso todavía no tiene sede confirmada, es presencial y gratuito, inicia el ${fechaLarga(
+      const resp = `*${
+        cursoExacto.titulo
+      }* todavía no tiene sede confirmada, es presencial y gratuito, inicia el ${fechaLarga(
         cursoExacto.fecha_inicio
       )} y se encuentra en estado de ${cursoExacto.estado.replace(
         "_",
@@ -291,17 +301,19 @@ client.on("message", async (msg) => {
       await msg.reply(resp);
       return;
     }
+
+    // ── CON localidades definidas ───────────────────────────────
     const listaLoc = cursoExacto.localidades.join(", ");
-    const resp = `El curso <strong>${
+    const resp = `El curso *${
       cursoExacto.titulo
-    }</strong> se dicta en: ${listaLoc}. Es presencial y gratuito, inicia el ${fechaLarga(
+    }* se dicta en: ${listaLoc}. Es presencial y gratuito, inicia el ${fechaLarga(
       cursoExacto.fecha_inicio
     )} y está en estado de ${cursoExacto.estado.replace(
       "_",
       " "
     )}. Formulario de inscripción: ${cursoExacto.formulario}`;
     state.ultimoLink = cursoExacto.formulario;
-    state.ultimoCurso = cursoExacto.titulo;
+    state.ultimoCursos = [cursoExacto.titulo];
     await msg.reply(resp);
     return;
   }
@@ -563,17 +575,26 @@ client.on("message", async (msg) => {
       state.ultimoLink = encontrados[0].formulario; // guarda el primero como fallback
     }
 
-    // Reemplazar enlaces con formato Markdown o HTML por texto plano
+    // 1) Negrita y cursiva de HTML → formato WhatsApp
+    r = r
+      .replace(/<(strong|b)>(.*?)<\/\1>/gi, "*$2*") // <strong> → *texto*
+      .replace(/<(em|i)>(.*?)<\/\1>/gi, "_$2_"); // <em>     → _texto_
+
+    // 2) Reemplazar enlaces HTML o Markdown por texto plano descriptivo
     r = r
       .replace(
+        // <a …>enlace</a>
         /<a [^>]*href="([^"]+)".*?<\/a>/gi,
         (_, u) => `Formulario de inscripción: ${u}`
       )
       .replace(
+        // [texto](https://…)
         /\[[^\]]*formulario[^\]]*\]\((https?:\/\/[^\)]+)\)/gi,
         (_, u) => `Formulario de inscripción: ${u}`
-      )
-      .replace(/<\/?[^>]+>/g, "");
+      );
+
+    // 3) Eliminar cualquier etiqueta HTML residual que aún quede
+    r = r.replace(/<\/?[^>]+>/g, "");
 
     // Eliminar duplicados de líneas "Formulario de inscripción: <link>"
     const lineas = r.split(/\r?\n/);
