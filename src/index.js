@@ -308,9 +308,7 @@ client.on("message", async (msg) => {
 
   /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
 
-  /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
-
-  // 1️⃣  Si el usuario acaba de elegir un curso entre varios
+  // 1️⃣  Detectar si el usuario acaba de elegir uno de los cursos múltiples
   const posibleCurso = cursosData.find((c) => norm(texto) === norm(c.titulo));
   if (
     state.ultimoCursos &&
