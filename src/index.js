@@ -687,7 +687,7 @@ client.on("message", async (msg) => {
 });
 
 /* ───────── GC de sesiones inactivas ───────── */
-const TTL_HORAS = 12;                            // ahora son 12 h
+const TTL_HORAS = 12; // ahora son 12 h
 setInterval(() => {
   const limite = Date.now() - TTL_HORAS * 3600_000;
   let borradas = 0;
@@ -702,6 +702,12 @@ setInterval(() => {
   }
 }, 30 * 60_000); // pasa la escoba cada 30 min
 
+/* ───────── Métricas de uso en Railway ───────── */
+const LOG_EVERY_MIN = 60; // cada 60 min
+setInterval(() => {
+  const mb = (process.memoryUsage().rss / 1_048_576).toFixed(1); // en MB
+  console.log(`USAGE ⊛ Sesiones activas: ${sesiones.size} | RSS ≈ ${mb} MB`);
+}, LOG_EVERY_MIN * 60_000);
+
 /* 7 ─ INICIALIZAR ─────────────────────────────────────────────────────*/
 client.initialize();
-
