@@ -359,7 +359,9 @@ client.on("message", async (msg) => {
   /* 6.3 TER – Preguntas frecuentes relacionadas al último curso ----------*/
 
   // 1️⃣  Detectar si el usuario acaba de elegir uno de los cursos múltiples
-  const posibleCurso = cursosData.find((c) => norm(texto) === norm(c.titulo));
+  const posibleCurso = cursosData.find((c) =>
+    new RegExp(`\\b${norm(c.titulo)}\\b`).test(norm(texto))
+  );
   if (
     state.ultimoCursos &&
     state.ultimoCursos.length > 1 &&
@@ -627,15 +629,14 @@ client.on("message", async (msg) => {
       new RegExp(`\\b${norm(c.titulo)}\\b`).test(norm(r))
     );
 
-    /* 🔸 Filtro anti-duplicados:
-     quita títulos que sean subcadena de otro
-     (ej.: “Indumentaria” dentro de “Indumentaria Carnavalera”) */
-    encontrados = encontrados.filter(
-      (c1) =>
-        !encontrados.some(
-          (c2) => c2 !== c1 && norm(c2.titulo).includes(norm(c1.titulo))
-        )
-    );
+    /* 🔸 Filtro anti-duplicados (solo elimina títulos idénticos) */
+    const vistos = new Set();
+    encontrados = encontrados.filter((c) => {
+      const clave = norm(c.titulo); // título normalizado
+      if (vistos.has(clave)) return false; // ya estaba → descartar
+      vistos.add(clave);
+      return true; // conservar
+    });
 
     if (encontrados.length) {
       state.ultimoCursos = encontrados.map((c) => c.titulo);
