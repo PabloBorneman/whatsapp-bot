@@ -549,7 +549,7 @@ client.on("message", async (msg) => {
       if (/horario|hora|turno|mañana|tarde|noche/i.test(lower)) {
         await msg.reply(
           limpiarHTML(
-            `Los horarios dependen de la sede y del docente asignado. Por lo general hay turnos mañana o tarde. Si necesitás algo específico, avisame y lo consulto.`
+            `Los horarios dependen de la sede y del docente asignado. Por lo general hay turnos mañana o tarde.`
           )
         );
         return;
