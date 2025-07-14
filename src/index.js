@@ -166,7 +166,9 @@ client.on("message", async (msg) => {
   if (!texto) return;
 
   const chatId = msg.from;
+  const ahora = Date.now();
   const state = sesiones.get(chatId) || { ultimoLink: null, ultimoCursos: [] };
+  state.updatedAt = ahora; // <── nuevo timestamp
   sesiones.set(chatId, state);
 
   /* 6.1 Atajo "link/formulario/inscribirme" ---------------------------*/
@@ -497,9 +499,7 @@ client.on("message", async (msg) => {
           );
         } else {
           await msg.reply(
-            limpiarHTML(
-              `Este curso está en estado de ${estado}.`
-            )
+            limpiarHTML(`Este curso está en estado de ${estado}.`)
           );
         }
         return;
@@ -686,5 +686,22 @@ client.on("message", async (msg) => {
   }
 });
 
+/* ───────── GC de sesiones inactivas ───────── */
+const TTL_HORAS = 12;                            // ahora son 12 h
+setInterval(() => {
+  const limite = Date.now() - TTL_HORAS * 3600_000;
+  let borradas = 0;
+  for (const [id, st] of sesiones) {
+    if (st.updatedAt < limite) {
+      sesiones.delete(id);
+      borradas++;
+    }
+  }
+  if (borradas) {
+    console.log(`🧹 Sesiones purgadas: ${borradas}`);
+  }
+}, 30 * 60_000); // pasa la escoba cada 30 min
+
 /* 7 ─ INICIALIZAR ─────────────────────────────────────────────────────*/
 client.initialize();
+
